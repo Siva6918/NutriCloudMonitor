@@ -22,47 +22,54 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ============================
-// CORS CONFIG (PRODUCTION SAFE)
-// ============================
-
-const allowedOrigins = [
-  "https://nutri-cloud-monitor.vercel.app",
-  "http://localhost:3000"
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // Allow Postman / direct access
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
-
-app.options("*", cors());
-
-// ============================
-// MIDDLEWARE
-// ============================
-
-app.use(express.json());
-
-// Static images
-app.use("/images", express.static(path.join(__dirname, "public/images")));
-
-// Connect DB
+// ========================================
+// DATABASE CONNECTION
+// ========================================
 connectDB();
 
-// ============================
-// ROUTES
-// ============================
+// ========================================
+// CORS CONFIGURATION (PRODUCTION SAFE)
+// ========================================
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
 
+      // Allow local development
+      if (origin === "http://localhost:3000") {
+        return callback(null, true);
+      }
+
+      // Allow all Vercel deployments (preview + production)
+      if (origin.endsWith(".vercel.app")) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("CORS not allowed for this origin"));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// Explicitly handle preflight
+app.options("*", cors());
+
+// ========================================
+// GLOBAL MIDDLEWARE
+// ========================================
+app.use(express.json());
+
+// Static image serving
+app.use(
+  "/images",
+  express.static(path.join(__dirname, "public/images"))
+);
+
+// ========================================
+// API ROUTES
+// ========================================
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/products", productRoutes);
@@ -73,15 +80,30 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/admin", adminRoutes);
 
-// Health check
+// ========================================
+// HEALTH CHECK
+// ========================================
 app.get("/api/health", (req, res) => {
-  res.json({ status: "Server is running" });
+  res.status(200).json({
+    status: "OK",
+    message: "Server is running",
+  });
 });
 
-// ============================
-// START SERVER
-// ============================
+// ========================================
+// GLOBAL ERROR HANDLER
+// ========================================
+app.use((err, req, res, next) => {
+  console.error("Server Error:", err.message);
+  res.status(500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+  });
+});
 
+// ========================================
+// START SERVER
+// ========================================
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
