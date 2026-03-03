@@ -131,9 +131,16 @@ const Login = () => {
               Sign up now.
             </button>
           </div>
+          <br />
+          <p className="text-white hover:underline focus:outline-none font-medium">
+            <p className="text-white hover:underline focus:outline-none font-medium"> <b>ADMIN LOGIN:</b></p>
+            <p className="text-red-500 hover:underline focus:outline-none font-medium"><b>Email:</b> <u className="text-blue-500 hover:underline focus:outline-none font-medium">admin@nutri.co</u></p>
+            <p className="text-red-500 hover:underline focus:outline-none font-medium"><b>Password:</b><u className="text-blue-500 hover:underline focus:outline-none font-medium">admin918</u>
+            </p></p>
           <p className="mt-3 text-[13px] text-[#8c8c8c]">
             This page is protected by Google reCAPTCHA to ensure you're not a bot. <a href="#" className="text-[#0071eb] hover:underline">Learn more.</a>
           </p>
+
         </div>
       </div>
 
