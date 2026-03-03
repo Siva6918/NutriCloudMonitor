@@ -23,13 +23,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Middleware
+
 app.use(cors({
   origin: [
-    "http://localhost:3000",
-    "http://localhost:5173"
+    "https://nutri-cloud-monitor.vercel.app",
+    "http://localhost:3000"
   ],
-  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
 }));
+
+app.options("*", cors());
 app.use(express.json());
 
 // Static files
