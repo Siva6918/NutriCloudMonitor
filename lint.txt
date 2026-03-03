@@ -1,0 +1,5 @@
+﻿
+> my-project@0.1.0 lint C:\Users\vasan\Let_It_Be___\WEB_DEV\NutriCloudMonitor
+> next lint
+
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #00D084;
+  --color-secondary: #FF6B6B;
+  --color-accent: #4ECDC4;
+  --color-warning: #FFE66D;
+  --color-dark: #2C3E50;
+  --color-light: #ECF0F1;
+}
+
+.meta-theme {
+  --theme-bg: #f8fafc;
+  --theme-text: #1e293b;
+  background-color: var(--theme-bg);
+  color: var(--theme-text);
+  min-height: 100vh;
+}
+
+.admin-theme {
+  --theme-bg: #1E1B4B;
+  /* Deep Indigo */
+  --theme-text: #e2e8f0;
+  background-color: var(--theme-bg);
+  color: var(--theme-text);
+  min-height: 100vh;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #f8f9fa;
+  /* Fallback */
+  color: #2c3e50;
+  /* Fallback */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glass Utility Classes */
+.glass-panel {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Vibrant gradient backgrounds */
+.bg-vibrant-gradient {
+  background: linear-gradient(135deg, #00D084 0%, #4ECDC4 100%);
+}
+
+.bg-vibrant-gradient-red {
+  background: linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%);
+}
+
+/* Card styles */
+.card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Button styles */
+.btn-primary {
+  background-color: #00D084;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: #00b86b;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background-color: #FF6B6B;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background-color: #ff5252;
+}
+
+/* Loading animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}

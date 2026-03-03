@@ -1,0 +1,32 @@
+[
+  {
+    "_id": "69a3b93b188cc8dcbb6e6647",
+    "name": "Rahul Sharma",
+    "email": "rahul.safe@nutri.co"
+  },
+  {
+    "_id": "69a3b93b188cc8dcbb6e664b",
+    "name": "Priya Verma",
+    "email": "priya.suspicious@nutri.co"
+  },
+  {
+    "_id": "69a3b93c188cc8dcbb6e664f",
+    "name": "Arjun Malhotra",
+    "email": "arjun.highrisk@nutri.co"
+  },
+  {
+    "_id": "69a3b93c188cc8dcbb6e6653",
+    "name": "Sneha Reddy",
+    "email": "sneha.cooldown@nutri.co"
+  },
+  {
+    "_id": "69a3b93c188cc8dcbb6e6657",
+    "name": "Vikram Patel",
+    "email": "vikram.blocked@nutri.co"
+  },
+  {
+    "_id": "69a3c836bf4dea8254f1618e",
+    "name": "Mallikarjuna Reddy Vasantha",
+    "email": "shaiktasleem822@gmail.com"
+  }
+]
