@@ -814,10 +814,12 @@ Once the Intelligence Systems identify an anomaly (Scenarios A, B, or C), the pl
 
 <div align="center">
 
-### 🧑‍💻 Developed By  
-Venkata Siva Reddy 
-Shaik Tasleem
-B.Tech – Computer Science  
+### 🧑‍💻 Developed By
+
+**Venkata Siva Reddy V**  
+**Shaik Tasleem**
+
+B.Tech – Computer Science & Engineering
 
 ---
 
