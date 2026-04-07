@@ -9,17 +9,50 @@ const generateToken = (userId) => {
   });
 };
 
+const isValidEmail = (email) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
+};
+
+const getPasswordStrength = (password) => {
+  let score = 0;
+  const value = String(password || '');
+
+  if (value.length >= 8) score++;
+  if (/[a-z]/.test(value)) score++;
+  if (/[A-Z]/.test(value)) score++;
+  if (/[0-9]/.test(value)) score++;
+  if (/[^A-Za-z0-9]/.test(value)) score++;
+
+  if (score <= 2) return 'weak';
+  if (score <= 4) return 'medium';
+  return 'strong';
+};
+
 export const signup = async (req, res) => {
   try {
-    const { name, email, password, confirmPassword } = req.body;
+    let { name, email, password, confirmPassword } = req.body;
+
+    name = String(name || '').trim();
+    email = String(email || '').trim().toLowerCase();
 
     // Validation
     if (!name || !email || !password || !confirmPassword) {
       return res.status(400).json({ message: 'Please provide all required fields' });
     }
 
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
     if (password !== confirmPassword) {
       return res.status(400).json({ message: 'Passwords do not match' });
+    }
+
+    const passwordStrength = getPasswordStrength(password);
+    if (passwordStrength === 'weak') {
+      return res.status(400).json({
+        message: 'Password is too weak. Use at least 8 characters with uppercase, lowercase, number, and special character.',
+      });
     }
 
     // Check if user already exists
@@ -62,11 +95,17 @@ export const signup = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+
+    email = String(email || '').trim().toLowerCase();
 
     // Validation
     if (!email || !password) {
       return res.status(400).json({ message: 'Please provide email and password' });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
     }
 
     const user = await User.findOne({ email }).select('+password');
@@ -75,18 +114,17 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // --- Access Control Rule Hierarchy ---
     // 1. Soft Delete Check
     if (user.isDeleted) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // 2. Admin Block Check (No metric mutation)
+    // 2. Admin Block Check
     if (user.adminStatus === 'Blocked') {
       return res.status(403).json({ message: 'Account permanently blocked by administrator.' });
     }
 
-    // 3. Admin Suspend Check (No metric mutation)
+    // 3. Admin Suspend Check
     if (user.adminStatus === 'Suspended') {
       return res.status(403).json({ message: 'Account is temporarily suspended.' });
     }
@@ -102,27 +140,22 @@ export const login = async (req, res) => {
     const isPasswordMatch = await user.comparePassword(password);
 
     if (!isPasswordMatch) {
-      // --- Failed Login Flow ---
-      // 1. Atomically increment attempts to prevent race conditions
       const updatedUser = await User.findOneAndUpdate(
         { _id: user._id },
         { $inc: { failedLoginAttempts: 1, totalFailedAttempts: 1 } },
         { new: true }
       );
 
-      // 2. Enforce Cooldown Rules
       let lockUpdates = {};
       if (updatedUser.failedLoginAttempts >= 5) {
-        lockUpdates.lockUntil = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes lock
+        lockUpdates.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
       }
 
-      // 3. Recalculate System Risk Metrics after mutation
       const { riskScore, systemStatus } = calculateRiskScoreAndStatus(
         updatedUser.failedLoginAttempts,
         updatedUser.totalFailedAttempts
       );
 
-      // 4. Persist Security Data
       await User.updateOne(
         { _id: user._id },
         {
@@ -134,7 +167,6 @@ export const login = async (req, res) => {
         }
       );
 
-      // 5. Log Forensic Event
       await ActivityLog.create({
         userId: user._id,
         action: 'LOGIN_FAILURE',
@@ -143,7 +175,6 @@ export const login = async (req, res) => {
         userAgent: req.headers['user-agent']
       });
 
-      // 6. Log High-Risk Multiple Attempts if Locked
       if (updatedUser.failedLoginAttempts >= 5) {
         await ActivityLog.create({
           userId: user._id,
@@ -157,8 +188,6 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // --- Successful Login Flow ---
-    // 1. Atomically Reset short-term failures and add to login count
     const updatedUser = await User.findOneAndUpdate(
       { _id: user._id },
       {
@@ -168,13 +197,11 @@ export const login = async (req, res) => {
       { new: true }
     );
 
-    // 2. Recalculate Metrics (Ensures Reversibility / Downgrade of HighRisk flag)
     const { riskScore, systemStatus } = calculateRiskScoreAndStatus(
-      0, // Short term memory is clear
+      0,
       updatedUser.totalFailedAttempts
     );
 
-    // 3. Save Final State
     await User.updateOne(
       { _id: user._id },
       {
@@ -186,7 +213,6 @@ export const login = async (req, res) => {
       }
     );
 
-    // 4. Log Forensic Event
     await ActivityLog.create({
       userId: user._id,
       action: 'LOGIN_SUCCESS',
@@ -204,12 +230,12 @@ export const login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        height: user.height,
-        weight: user.weight,
-        bmi: user.bmi,
-        bmiCategory: user.bmiCategory,
+        height: updatedUser.height,
+        weight: updatedUser.weight,
+        bmi: updatedUser.bmi,
+        bmiCategory: updatedUser.bmiCategory,
         systemStatus,
-        adminStatus: user.adminStatus
+        adminStatus: updatedUser.adminStatus
       },
     });
   } catch (error) {
