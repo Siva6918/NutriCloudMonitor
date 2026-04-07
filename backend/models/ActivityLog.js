@@ -21,7 +21,16 @@ const activityLogSchema = new mongoose.Schema(
         // Clickstream Analytics
         'PAGE_TRANSITION',
         // Security Events
-        'NEW_DEVICE_LOGIN', 'NEW_LOCATION_LOGIN', 'MULTIPLE_FAILED_ATTEMPTS', 'HIGH_RISK_SCORE'
+        'NEW_DEVICE_LOGIN', 'NEW_LOCATION_LOGIN', 'MULTIPLE_FAILED_ATTEMPTS', 'HIGH_RISK_SCORE',
+        'SIGNUP',
+        'LOGIN_SUCCESS',
+        'LOGIN_FAILURE',
+        'LOGOUT',
+        'PAGE_TRANSITION',
+        'MULTIPLE_FAILED_ATTEMPTS',
+        'checkout',
+        'add_to_cart',
+        'BMI_CALCULATED'
       ],
     },
     details: {
