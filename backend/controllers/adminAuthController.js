@@ -7,27 +7,33 @@ const generateToken = (adminId) => {
   });
 };
 
+const isValidEmail = (email) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
+};
+
 export const adminLogin = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+
+    email = String(email || '').trim().toLowerCase();
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Please provide email and password' });
     }
 
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
     const admin = await Admin.findOne({ email }).select('+password');
-    console.log(`[Diagnostic] Found admin document: ${!!admin}`);
 
     if (!admin) {
-      console.log(`[Diagnostic] REJECTED 401: No document for email '${email}'`);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const isPasswordMatch = await admin.comparePassword(password);
-    console.log(`[Diagnostic] Password Match Result for '${password}': ${isPasswordMatch}`);
 
     if (!isPasswordMatch) {
-      console.log(`[Diagnostic] REJECTED 401: Password '${password}' failed bcrypt comparison.`);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -49,10 +55,16 @@ export const adminLogin = async (req, res) => {
 
 export const adminRegister = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+
+    email = String(email || '').trim().toLowerCase();
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Please provide all required fields' });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
     }
 
     const adminExists = await Admin.findOne({ email });
