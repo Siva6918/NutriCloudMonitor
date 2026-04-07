@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { authAPI, adminAuthAPI, ASSET_URL } from '../../services/api';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
 
@@ -23,6 +24,10 @@ const Login = () => {
     setToast({ show: true, message });
     setTimeout(() => setToast({ show: false, message: '' }), 5000);
   };
+
+  const emailValue = email.trim();
+  const showEmailValidation = emailValue.length > 0;
+  const emailIsValid = isValidEmail(emailValue);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -55,16 +60,12 @@ const Login = () => {
           userError.response?.status === 404 ||
           userError.response?.status === 400
         ) {
-          try {
-            const adminResponse = await adminAuthAPI.login({
-              email: normalizedEmail,
-              password
-            });
-            adminAuth.login(adminResponse.data.admin, adminResponse.data.token);
-            navigate('/admin/dashboard');
-          } catch (adminError) {
-            throw adminError;
-          }
+          const adminResponse = await adminAuthAPI.login({
+            email: normalizedEmail,
+            password
+          });
+          adminAuth.login(adminResponse.data.admin, adminResponse.data.token);
+          navigate('/admin/dashboard');
         } else {
           throw userError;
         }
@@ -116,20 +117,33 @@ const Login = () => {
               <label className="absolute text-zinc-400 text-sm duration-150 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] left-5 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 pointer-events-none">
                 Email address
               </label>
+              {showEmailValidation && (
+                <p className={`mt-2 text-sm ${emailIsValid ? 'text-green-400' : 'text-red-400'}`}>
+                  {emailIsValid ? 'Valid email address' : 'Invalid email address'}
+                </p>
+              )}
             </div>
 
             <div className="relative">
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-[#333] border border-transparent rounded-[4px] px-5 py-4 text-white text-base focus:outline-none focus:bg-[#454545] transition-colors peer"
+                className="w-full bg-[#333] border border-transparent rounded-[4px] px-5 py-4 pr-14 text-white text-base focus:outline-none focus:bg-[#454545] transition-colors peer"
                 placeholder=" "
                 required
               />
               <label className="absolute text-zinc-400 text-sm duration-150 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] left-5 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 pointer-events-none">
                 Password
               </label>
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-white"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
 
             <button
@@ -171,17 +185,9 @@ const Login = () => {
             </button>
 
             <div className="mt-6">
-              <p className="text-white font-medium">
-                <b>ADMIN LOGIN:</b>
-              </p>
-              <p className="text-red-500 font-medium">
-                <b>Email:</b>{' '}
-                <u className="text-blue-500">admin@nutri.co</u>
-              </p>
-              <p className="text-red-500 font-medium">
-                <b>Password:</b>{' '}
-                <u className="text-blue-500">admin918</u>
-              </p>
+              <p className="text-white font-medium"><b>ADMIN LOGIN:</b></p>
+              <p className="text-red-500 font-medium"><b>Email:</b> <u className="text-blue-500">admin@nutri.co</u></p>
+              <p className="text-red-500 font-medium"><b>Password:</b> <u className="text-blue-500">admin918</u></p>
             </div>
 
             <p className="mt-3 text-[13px] text-[#8c8c8c]">
