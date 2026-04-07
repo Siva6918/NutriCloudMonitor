@@ -10,36 +10,70 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
+
   const userAuth = useAuth();
   const adminAuth = useAdminAuth();
   const navigate = useNavigate();
 
+  const isValidEmail = (value) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
+  };
+
+  const showToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => setToast({ show: false, message: '' }), 5000);
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!isValidEmail(normalizedEmail)) {
+      showToast('Please enter a valid email address');
+      return;
+    }
+
+    if (!password.trim()) {
+      showToast('Please enter your password');
+      return;
+    }
+
     setLoading(true);
+
     try {
       try {
-        // Attempt User Login
-        const response = await authAPI.login({ email, password });
+        const response = await authAPI.login({
+          email: normalizedEmail,
+          password
+        });
         userAuth.login(response.data.user, response.data.token);
         navigate('/dashboard');
       } catch (userError) {
-        // If user login fails with Auth errors, try Admin Login
-        if (userError.response?.status === 401 || userError.response?.status === 404 || userError.response?.status === 400) {
+        if (
+          userError.response?.status === 401 ||
+          userError.response?.status === 404 ||
+          userError.response?.status === 400
+        ) {
           try {
-            const adminResponse = await adminAuthAPI.login({ email, password });
+            const adminResponse = await adminAuthAPI.login({
+              email: normalizedEmail,
+              password
+            });
             adminAuth.login(adminResponse.data.admin, adminResponse.data.token);
             navigate('/admin/dashboard');
           } catch (adminError) {
-            throw adminError; // Throw admin error if both fail
+            throw adminError;
           }
         } else {
-          throw userError; // If network error, throw early
+          throw userError;
         }
       }
     } catch (error) {
-      setToast({ show: true, message: 'Authentication Failed: ' + (error.response?.data?.message || 'Invalid Credentials') });
-      setTimeout(() => setToast({ show: false, message: '' }), 5000);
+      showToast(
+        'Authentication Failed: ' +
+          (error.response?.data?.message || 'Invalid Credentials')
+      );
     } finally {
       setLoading(false);
     }
@@ -47,8 +81,6 @@ const Login = () => {
 
   return (
     <div className="flex w-full min-h-screen relative bg-black font-sans text-white selection:bg-[#E50914] selection:text-white">
-
-      {/* Cinematic Background Simulation - Vibrant Ultra High-Res */}
       <div
         className="absolute inset-0 z-0 bg-cover bg-center"
         style={{
@@ -61,14 +93,12 @@ const Login = () => {
         <div className="absolute inset-0 bg-black/10"></div>
       </div>
 
-      {/* Header Logo */}
       <div className="absolute top-0 left-0 w-full p-6 md:px-12 z-20">
         <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-[#E50914] drop-shadow-md">
           NUTRI
         </h1>
       </div>
 
-      {/* Centered Netflix Login Card */}
       <div className="w-full flex justify-center items-center z-10 px-4 pt-16 pb-8 min-h-screen">
         <div className="bg-black/60 md:bg-black/40 w-full max-w-[450px] p-10 md:p-16 rounded-xl md:rounded-2xl shadow-2xl backdrop-blur-md border border-white/10 ring-1 ring-white/20">
           <h2 className="text-[32px] font-bold text-white mb-7 tracking-tight">Sign In</h2>
@@ -84,7 +114,7 @@ const Login = () => {
                 required
               />
               <label className="absolute text-zinc-400 text-sm duration-150 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] left-5 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 pointer-events-none">
-                Email or phone number
+                Email address
               </label>
             </div>
 
@@ -119,32 +149,49 @@ const Login = () => {
 
           <div className="flex justify-between items-center text-[#B3B3B3] text-sm mt-4">
             <div className="flex items-center gap-2">
-              <input type="checkbox" className="w-4 h-4 rounded-sm bg-[#737373] border-none accent-[#B3B3B3] cursor-pointer" id="remember" />
-              <label htmlFor="remember" className="cursor-pointer font-medium">Remember me</label>
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded-sm bg-[#737373] border-none accent-[#B3B3B3] cursor-pointer"
+                id="remember"
+              />
+              <label htmlFor="remember" className="cursor-pointer font-medium">
+                Remember me
+              </label>
             </div>
             <a href="#" className="hover:underline">Need help?</a>
           </div>
 
           <div className="mt-16 text-[#737373] text-base">
             New to Nutri?{' '}
-            <button onClick={() => navigate('/signup')} className="text-white hover:underline focus:outline-none font-medium">
+            <button
+              onClick={() => navigate('/signup')}
+              className="text-white hover:underline focus:outline-none font-medium"
+            >
               Sign up now.
             </button>
-          </div>
-          <br />
-          <p className="text-white hover:underline focus:outline-none font-medium">
-            <p className="text-white hover:underline focus:outline-none font-medium"> <b>ADMIN LOGIN:</b></p>
-            <p className="text-red-500 hover:underline focus:outline-none font-medium"><b>Email:</b> <u className="text-blue-500 hover:underline focus:outline-none font-medium">admin@nutri.co</u></p>
-            <p className="text-red-500 hover:underline focus:outline-none font-medium"><b>Password:</b><u className="text-blue-500 hover:underline focus:outline-none font-medium">admin918</u>
-            </p></p>
-          <p className="mt-3 text-[13px] text-[#8c8c8c]">
-            This page is protected by Google reCAPTCHA to ensure you're not a bot. <a href="#" className="text-[#0071eb] hover:underline">Learn more.</a>
-          </p>
 
+            <div className="mt-6">
+              <p className="text-white font-medium">
+                <b>ADMIN LOGIN:</b>
+              </p>
+              <p className="text-red-500 font-medium">
+                <b>Email:</b>{' '}
+                <u className="text-blue-500">admin@nutri.co</u>
+              </p>
+              <p className="text-red-500 font-medium">
+                <b>Password:</b>{' '}
+                <u className="text-blue-500">admin918</u>
+              </p>
+            </div>
+
+            <p className="mt-3 text-[13px] text-[#8c8c8c]">
+              This page is protected by Google reCAPTCHA to ensure you're not a bot.{' '}
+              <a href="#" className="text-[#0071eb] hover:underline">Learn more.</a>
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Toast Notification (Bottom Right) */}
       {toast.show && (
         <div className="fixed bottom-6 right-6 bg-[#181818] border border-zinc-800 text-white px-6 py-4 rounded shadow-2xl z-50 animate-in slide-in-from-bottom-5 fade-in duration-300 flex items-center gap-3">
           <AlertCircle className="text-[#E87C03]" size={24} />
