@@ -173,10 +173,19 @@ export const getAllActivities = async (req, res) => {
 
 export const getAnomalousActivities = async (req, res) => {
   try {
-    // Detect potential anomalies: multiple failed logins, rapid purchases, etc.
     const suspiciousUsers = await ActivityLog.aggregate([
       {
-        $match: { action: 'login' },
+        $match: {
+          action: {
+            $in: [
+              'login',
+              'login_failed',
+              'LOGIN_FAILURE',
+              'login_success',
+              'LOGIN_SUCCESS',
+            ],
+          },
+        },
       },
       {
         $group: {
@@ -186,7 +195,7 @@ export const getAnomalousActivities = async (req, res) => {
         },
       },
       {
-        $match: { loginCount: { $gt: 10 } }, // More than 10 logins in short period
+        $match: { loginCount: { $gt: 10 } },
       },
       {
         $sort: { loginCount: -1 },
@@ -219,7 +228,7 @@ export const getAnomalousActivities = async (req, res) => {
       {
         $match: {
           checkoutCount: { $gt: 5 },
-          timeSpan: { $lt: 3600000 }, // Within 1 hour
+          timeSpan: { $lt: 3600000 },
         },
       },
     ]);
@@ -271,9 +280,8 @@ export const softDeleteUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Preserve forensic data by soft-deleting
     user.isDeleted = true;
-    user.adminStatus = 'Blocked'; // Hard block purely as a secondary access safeguard
+    user.adminStatus = 'Blocked';
     await user.save();
 
     res.status(200).json({
@@ -290,50 +298,118 @@ export const getSOCMetrics = async (req, res) => {
     const now = new Date();
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    // 1. KPI Aggregations
     const totalActiveUsers = await User.countDocuments({ isDeleted: false });
-    const totalSessionsToday = await ActivityLog.countDocuments({ action: 'login_success', createdAt: { $gte: oneDayAgo } });
-    const failedLoginAttempts = await ActivityLog.countDocuments({ action: 'login_failed', createdAt: { $gte: oneDayAgo } });
+
+    const totalSessionsToday = await ActivityLog.countDocuments({
+      action: { $in: ['login_success', 'LOGIN_SUCCESS'] },
+      createdAt: { $gte: oneDayAgo },
+    });
+
+    const failedLoginAttempts = await ActivityLog.countDocuments({
+      action: { $in: ['login_failed', 'LOGIN_FAILURE', 'MULTIPLE_FAILED_ATTEMPTS'] },
+      createdAt: { $gte: oneDayAgo },
+    });
 
     const recentFailedLogins = await ActivityLog.aggregate([
-      { $match: { action: 'login_failed', createdAt: { $gte: oneDayAgo } } },
-      { $group: { _id: '$userId', count: { $sum: 1 } } },
-      { $match: { count: { $gt: 5 } } }
+      {
+        $match: {
+          action: { $in: ['login_failed', 'LOGIN_FAILURE', 'MULTIPLE_FAILED_ATTEMPTS'] },
+          createdAt: { $gte: oneDayAgo },
+        },
+      },
+      {
+        $group: {
+          _id: '$userId',
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $match: { count: { $gt: 5 } },
+      },
     ]);
+
     const detectedAnomalies = recentFailedLogins.length;
 
-    // Building KPI (using real current values and synthetically smoothed trends for visualization)
     const kpi = {
-      totalActiveUsers: { current: totalActiveUsers, trend: [totalActiveUsers > 5 ? totalActiveUsers - 5 : 0, totalActiveUsers > 2 ? totalActiveUsers - 2 : 0, totalActiveUsers] },
-      totalSessionsToday: { current: totalSessionsToday, trend: [Math.floor(totalSessionsToday * 0.8), Math.floor(totalSessionsToday * 0.9), totalSessionsToday] },
-      failedLoginAttempts: { current: failedLoginAttempts, trend: [Math.floor(failedLoginAttempts * 0.5), Math.floor(failedLoginAttempts * 0.8), failedLoginAttempts] },
-      detectedAnomalies: { current: detectedAnomalies, trend: [0, Math.floor(detectedAnomalies / 2), detectedAnomalies] },
-      averageRiskScore: { current: detectedAnomalies > 0 ? 35 : 12, trend: [10, 15, detectedAnomalies > 0 ? 35 : 12] }
+      totalActiveUsers: {
+        current: totalActiveUsers,
+        trend: [
+          totalActiveUsers > 5 ? totalActiveUsers - 5 : 0,
+          totalActiveUsers > 2 ? totalActiveUsers - 2 : 0,
+          totalActiveUsers,
+        ],
+      },
+      totalSessionsToday: {
+        current: totalSessionsToday,
+        trend: [
+          Math.floor(totalSessionsToday * 0.8),
+          Math.floor(totalSessionsToday * 0.9),
+          totalSessionsToday,
+        ],
+      },
+      failedLoginAttempts: {
+        current: failedLoginAttempts,
+        trend: [
+          Math.floor(failedLoginAttempts * 0.5),
+          Math.floor(failedLoginAttempts * 0.8),
+          failedLoginAttempts,
+        ],
+      },
+      detectedAnomalies: {
+        current: detectedAnomalies,
+        trend: [0, Math.floor(detectedAnomalies / 2), detectedAnomalies],
+      },
+      averageRiskScore: {
+        current: detectedAnomalies > 0 ? 35 : 12,
+        trend: [10, 15, detectedAnomalies > 0 ? 35 : 12],
+      },
     };
 
-    // 2. Activity Trend (Last 24 hours, bucketed loosely)
     const last24hLogs = await ActivityLog.find({ createdAt: { $gte: oneDayAgo } });
     const activityTrendMap = {};
+
     for (let i = 0; i < 6; i++) {
       const d = new Date(now.getTime() - i * 4 * 60 * 60 * 1000);
       const hourLabel = d.getHours().toString().padStart(2, '0') + ':00';
-      activityTrendMap[hourLabel] = { time: hourLabel, successfulLogins: 0, failedLogins: 0, checkouts: 0 };
+      activityTrendMap[hourLabel] = {
+        time: hourLabel,
+        successfulLogins: 0,
+        failedLogins: 0,
+        checkouts: 0,
+      };
     }
 
-    last24hLogs.forEach(log => {
+    last24hLogs.forEach((log) => {
       const d = new Date(log.createdAt);
       const bucketHour = Math.floor(d.getHours() / 4) * 4;
       const hourLabel = bucketHour.toString().padStart(2, '0') + ':00';
-      if (!activityTrendMap[hourLabel]) {
-        activityTrendMap[hourLabel] = { time: hourLabel, successfulLogins: 0, failedLogins: 0, checkouts: 0 };
-      }
-      if (log.action === 'login_success') activityTrendMap[hourLabel].successfulLogins++;
-      if (log.action === 'login_failed') activityTrendMap[hourLabel].failedLogins++;
-      if (log.action === 'checkout') activityTrendMap[hourLabel].checkouts++;
-    });
-    const activityTrend = Object.values(activityTrendMap).sort((a, b) => a.time.localeCompare(b.time));
 
-    // 3. Risk Distribution
+      if (!activityTrendMap[hourLabel]) {
+        activityTrendMap[hourLabel] = {
+          time: hourLabel,
+          successfulLogins: 0,
+          failedLogins: 0,
+          checkouts: 0,
+        };
+      }
+
+      if (['login_success', 'LOGIN_SUCCESS'].includes(log.action)) {
+        activityTrendMap[hourLabel].successfulLogins++;
+      }
+
+      if (['login_failed', 'LOGIN_FAILURE', 'MULTIPLE_FAILED_ATTEMPTS'].includes(log.action)) {
+        activityTrendMap[hourLabel].failedLogins++;
+      }
+
+      if (log.action === 'checkout') {
+        activityTrendMap[hourLabel].checkouts++;
+      }
+    });
+
+    const activityTrend = Object.values(activityTrendMap).sort((a, b) =>
+      a.time.localeCompare(b.time)
+    );
+
     const highRisk = await User.countDocuments({ systemStatus: 'HighRisk', isDeleted: false });
     const medRisk = await User.countDocuments({ systemStatus: 'Suspicious', isDeleted: false });
     const lowRisk = totalActiveUsers - highRisk - medRisk;
@@ -344,26 +420,43 @@ export const getSOCMetrics = async (req, res) => {
       { name: 'High Risk (71-100)', count: highRisk, color: '#ef4444' },
     ];
 
-    // 4. Live Alerts
     const alerts = [];
     if (recentFailedLogins.length > 0) {
       alerts.push({
-        id: `alert-${Date.now()}`, time: 'Recently', type: 'MULTIPLE_FAILED_ATTEMPTS', risk: 'HIGH',
+        id: `alert-${Date.now()}`,
+        time: 'Recently',
+        type: 'MULTIPLE_FAILED_ATTEMPTS',
+        risk: 'HIGH',
         user: recentFailedLogins[0]._id ? recentFailedLogins[0]._id.toString() : 'Unknown Identity',
-        ip: 'Tracked Node', description: `${recentFailedLogins[0].count} failed login attempts detected by system.`
+        ip: 'Tracked Node',
+        description: `${recentFailedLogins[0].count} failed login attempts detected by system.`,
       });
     } else {
-      // Fallback info alert so the panel isn't completely dead on empty systems
       alerts.push({
-        id: `alert-sys`, time: 'Just Now', type: 'SYSTEM_AUDIT', risk: 'INFO',
-        user: 'SYSTEM', ip: 'internal', description: `SOC Monitoring active and checking streams.`
+        id: 'alert-sys',
+        time: 'Just Now',
+        type: 'SYSTEM_AUDIT',
+        risk: 'INFO',
+        user: 'SYSTEM',
+        ip: 'internal',
+        description: 'SOC Monitoring active and checking streams.',
       });
     }
 
-    // 5. Clickstream (Using some real counts mixed with structural links)
-    const productViews = await ActivityLog.countDocuments({ action: 'view_product', createdAt: { $gte: oneDayAgo } });
-    const addsToCart = await ActivityLog.countDocuments({ action: 'add_to_cart', createdAt: { $gte: oneDayAgo } });
-    const checkouts = await ActivityLog.countDocuments({ action: 'checkout', createdAt: { $gte: oneDayAgo } });
+    const productViews = await ActivityLog.countDocuments({
+      action: 'view_product',
+      createdAt: { $gte: oneDayAgo },
+    });
+
+    const addsToCart = await ActivityLog.countDocuments({
+      action: 'add_to_cart',
+      createdAt: { $gte: oneDayAgo },
+    });
+
+    const checkouts = await ActivityLog.countDocuments({
+      action: 'checkout',
+      createdAt: { $gte: oneDayAgo },
+    });
 
     const clickstream = [
       { source: 'Home', target: 'Products', value: productViews > 0 ? productViews + 50 : 50 },
@@ -371,11 +464,9 @@ export const getSOCMetrics = async (req, res) => {
       { source: 'Product Detail', target: 'Cart', value: addsToCart > 0 ? addsToCart : 5 },
       { source: 'Cart', target: 'Checkout', value: checkouts > 0 ? checkouts : 2 },
       { source: 'Checkout', target: 'Success', value: checkouts > 0 ? Math.floor(checkouts * 0.8) : 1 },
-      // Simple anomalous bypass
-      { source: 'Home', target: 'Checkout', value: 1 }
+      { source: 'Home', target: 'Checkout', value: 1 },
     ];
 
-    // 6. Session Analytics (Derived heuristics for visual fidelity)
     const sessionAnalytics = {
       devices: [
         { name: 'Desktop (Windows)', value: 65, fill: '#3b82f6' },
@@ -387,7 +478,7 @@ export const getSOCMetrics = async (req, res) => {
         { range: '5-15m', users: totalSessionsToday > 0 ? Math.ceil(totalSessionsToday * 0.3) : 5 },
         { range: '15-30m', users: totalSessionsToday > 0 ? Math.ceil(totalSessionsToday * 0.2) : 2 },
         { range: '30m+', users: totalSessionsToday > 0 ? Math.ceil(totalSessionsToday * 0.1) : 1 },
-      ]
+      ],
     };
 
     res.status(200).json({
@@ -399,8 +490,8 @@ export const getSOCMetrics = async (req, res) => {
         alerts,
         clickstream,
         sessionAnalytics,
-        geoData: []
-      }
+        geoData: [],
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -409,50 +500,43 @@ export const getSOCMetrics = async (req, res) => {
 
 export const getClickstreamMatrix = async (req, res) => {
   try {
-    // 1. Fetch raw transition counts
     const transitions = await ActivityLog.aggregate([
       { $match: { action: 'PAGE_TRANSITION' } },
       {
         $group: {
           _id: { source: '$details.source', target: '$details.target' },
-          count: { $sum: 1 }
-        }
-      }
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
-    // 2. Calculate total outgoing traffic from each source node
     const sourceTotals = {};
-    transitions.forEach(t => {
+    transitions.forEach((t) => {
       const source = t._id.source;
       if (!sourceTotals[source]) sourceTotals[source] = 0;
       sourceTotals[source] += t.count;
     });
 
-    // 3. Build Statistical Matrix with Probabilities
-    const matrix = transitions.map(t => {
+    const matrix = transitions.map((t) => {
       const source = t._id.source;
       const target = t._id.target;
       const count = t.count;
-      const probability = sourceTotals[source] > 0 ? (count / sourceTotals[source]) : 0;
+      const probability = sourceTotals[source] > 0 ? count / sourceTotals[source] : 0;
 
       return {
         source,
         target,
-        value: count, // UI expects `value` for the count metric
-        probability: Math.round(probability * 1000) / 1000 // 3 decimal places
+        value: count,
+        probability: Math.round(probability * 1000) / 1000,
       };
     });
 
-    // Sort by most frequent paths first
     matrix.sort((a, b) => b.value - a.value);
 
-    // 4. Split Normal vs Anomalous (threshold < 5% / 0.05)
-    // We only flag anomalies if the source node has enough traffic to be statistically significant (> 5 total)
     const normalFlow = [];
     const anomalousFlow = [];
 
-    matrix.forEach(edge => {
-      // Very rare path and source has enough data to trust the probability
+    matrix.forEach((edge) => {
       if (edge.probability < 0.05 && sourceTotals[edge.source] >= 5) {
         anomalousFlow.push(edge);
       } else {
@@ -465,10 +549,9 @@ export const getClickstreamMatrix = async (req, res) => {
       data: {
         normalFlow,
         anomalousFlow,
-        rawMatrix: matrix
-      }
+        rawMatrix: matrix,
+      },
     });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
