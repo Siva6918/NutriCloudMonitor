@@ -3,40 +3,39 @@ import { Users, Activity, ShieldAlert, Zap, Target } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
 const SummaryCards = ({ kpi }) => {
-    // If we're not using mock data yet, provide defaults
     if (!kpi) return null;
 
     return (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-2 shrink-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-2 shrink-0">
             <StatCard
                 title="TOTAL ACTIVE USERS"
                 data={kpi.totalActiveUsers}
-                icon={<Users size={20} className="text-blue-400" />}
-                color="#3b82f6"
+                icon={<Users size={20} className="text-cyan-300" />}
+                color="#22d3ee"
             />
             <StatCard
                 title="SESSIONS (24H)"
                 data={kpi.totalSessionsToday}
-                icon={<Activity size={20} className="text-indigo-400" />}
-                color="#818cf8"
+                icon={<Activity size={20} className="text-violet-300" />}
+                color="#8b5cf6"
             />
             <StatCard
                 title="LOGIN FAILURES"
                 data={kpi.failedLoginAttempts}
-                icon={<ShieldAlert size={20} className="text-red-400" />}
-                color="#ef4444"
+                icon={<ShieldAlert size={20} className="text-rose-300" />}
+                color="#fb7185"
             />
             <StatCard
                 title="ANOMALIES (24H)"
                 data={kpi.detectedAnomalies}
-                icon={<Zap size={20} className="text-orange-400" />}
-                color="#f97316"
+                icon={<Zap size={20} className="text-amber-300" />}
+                color="#f59e0b"
             />
             <StatCard
                 title="AVG RISK SCORE"
                 data={kpi.averageRiskScore}
-                icon={<Target size={20} className="text-cyan-400" />}
-                color="#00E5FF"
+                icon={<Target size={20} className="text-sky-300" />}
+                color="#38bdf8"
                 suffix="/100"
             />
         </div>
@@ -44,47 +43,76 @@ const SummaryCards = ({ kpi }) => {
 };
 
 const StatCard = ({ title, data, icon, color, suffix = '' }) => {
-    // Format trend data for recharts
-    const chartData = data.trend.map((val, i) => ({ value: val, index: i }));
-    const trendDiff = data.trend[data.trend.length - 1] - data.trend[0];
+    const trend = Array.isArray(data?.trend) && data.trend.length > 0 ? data.trend : [0, 0, 0, 0, 0];
+    const currentValue = typeof data?.current === 'number' ? data.current : 0;
+
+    const chartData = trend.map((val, i) => ({
+        value: typeof val === 'number' ? val : 0,
+        index: i
+    }));
+
+    const trendDiff = trend[trend.length - 1] - trend[0];
     const isUp = trendDiff >= 0;
 
     return (
-        <div className="glass-panel bg-black/40 border border-white/5 rounded-lg p-4 flex flex-col justify-between transition-colors hover:bg-white/5 relative overflow-hidden group">
-            {/* Background Glow */}
-            <div className="absolute -bottom-10 -right-10 w-24 h-24 rounded-full blur-2xl opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none" style={{ backgroundColor: color }}></div>
+        <div className="group relative overflow-hidden rounded-[24px] border border-white/10 bg-[rgba(255,255,255,0.08)] p-4 backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition-all duration-300 hover:-translate-y-1 hover:bg-[rgba(255,255,255,0.11)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.24)]">
+            <div
+                className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full blur-3xl opacity-20 transition-opacity duration-300 group-hover:opacity-35"
+                style={{ backgroundColor: color }}
+            />
 
-            <div className="flex justify-between items-start mb-4">
-                <div>
-                    <p className="text-gray-500 text-[9px] md:text-[10px] font-mono tracking-widest uppercase">{title}</p>
-                    <div className="flex items-baseline gap-1 mt-1">
-                        <p className="text-xl md:text-2xl font-black text-white tracking-tighter">{data.current.toLocaleString()}</p>
-                        {suffix && <span className="text-gray-500 text-xs font-mono">{suffix}</span>}
+            <div className="relative flex items-start justify-between gap-3 mb-5">
+                <div className="min-w-0">
+                    <p className="text-[10px] md:text-[11px] font-semibold tracking-[0.24em] text-slate-400 uppercase">
+                        {title}
+                    </p>
+
+                    <div className="mt-2 flex items-end gap-1">
+                        <p className="text-2xl md:text-[1.8rem] leading-none font-black tracking-tight text-white">
+                            {currentValue.toLocaleString()}
+                        </p>
+                        {suffix && (
+                            <span className="pb-1 text-xs font-semibold text-slate-400">
+                                {suffix}
+                            </span>
+                        )}
                     </div>
                 </div>
-                <div className="p-2 bg-black/50 rounded border border-white/5" style={{ boxShadow: `0 0 10px ${color}20` }}>
+
+                <div
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/20 shadow-[inset_-4px_-4px_12px_rgba(255,255,255,0.03),inset_6px_6px_12px_rgba(0,0,0,0.18)]"
+                    style={{ boxShadow: `inset -4px -4px 12px rgba(255,255,255,0.03), inset 6px 6px 12px rgba(0,0,0,0.18), 0 0 18px ${color}22` }}
+                >
                     {icon}
                 </div>
             </div>
 
-            <div className="h-10 w-full mt-auto flex items-end gap-2">
-                <div className="w-2/3 h-full">
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <div className="relative mt-auto flex items-end gap-3">
+                <div className="h-12 w-[70%] min-w-0">
+                    <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={chartData}>
                             <Line
                                 type="monotone"
                                 dataKey="value"
                                 stroke={color}
-                                strokeWidth={2}
+                                strokeWidth={2.5}
                                 dot={false}
                                 isAnimationActive={false}
                             />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
-                <div className="w-1/3 text-right">
-                    <span className={`text-[10px] font-mono font-bold ${isUp ? 'text-green-500' : 'text-red-500'}`}>
-                        {isUp ? '+' : ''}{trendDiff}
+
+                <div className="flex w-[30%] justify-end">
+                    <span
+                        className={`rounded-full px-2.5 py-1 text-[10px] font-bold tracking-[0.16em] ${
+                            isUp
+                                ? 'bg-emerald-500/12 text-emerald-300 border border-emerald-400/20'
+                                : 'bg-rose-500/12 text-rose-300 border border-rose-400/20'
+                        }`}
+                    >
+                        {isUp ? '+' : ''}
+                        {trendDiff}
                     </span>
                 </div>
             </div>
