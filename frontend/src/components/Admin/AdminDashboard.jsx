@@ -228,7 +228,7 @@ const AdminDashboard = () => {
                   {activeTab === 'users' && (
                     <div className="flex flex-1 flex-col gap-6">
                       <div className="rounded-[28px] border border-white/10 bg-white/6 p-3 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)]">
-                        <SummaryCards stats={stats} />
+                        <SummaryCards kpi={stats} />
                       </div>
 
                       <div className="rounded-[28px] border border-white/10 bg-white/7 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)] flex-1">
