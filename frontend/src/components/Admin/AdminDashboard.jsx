@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu } from 'lucide-react';
+import { Menu, Sparkles, ShieldCheck, Activity } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { adminAPI } from '../../services/api';
 import AdminSidebar from './components/AdminSidebar';
@@ -9,7 +9,6 @@ import UsersTable from './components/UsersTable';
 import BehaviorPanel from './components/BehaviorPanel';
 import ForensicLogPanel from './components/ForensicLogPanel';
 import SecurityLogTable from './components/SecurityLogTable';
-// SOC Redesign components
 import ActivityGraph from './components/Overview/ActivityGraph';
 import RiskDistribution from './components/Overview/RiskDistribution';
 import ClickstreamAnalysis from './components/Overview/ClickstreamAnalysis';
@@ -55,8 +54,7 @@ const AdminDashboard = () => {
       setSocMetrics(socMetricsRes.data.data);
       setClickstreamData(clickstreamRes.data.data);
 
-      // Filter out soft-deleted users for the table
-      const activeUsers = (usersRes.data.users || []).filter(u => !u.isDeleted);
+      const activeUsers = (usersRes.data.users || []).filter((u) => !u.isDeleted);
       setUsers(activeUsers);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -70,21 +68,36 @@ const AdminDashboard = () => {
     navigate('/admin/login');
   };
 
-  return (
-    <div className="admin-theme bg-admin-bg text-white min-h-screen w-full flex font-sans relative">
-      {/* Subtle Grid Background */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:30px_30px] opacity-50 pointer-events-none z-0"></div>
+  const getPageTitle = () => {
+    if (activeTab === 'overview') return 'SOC Overview';
+    if (activeTab === 'users') return 'User Governance';
+    if (activeTab === 'monitoring') return 'Behavioral Monitoring';
+    if (activeTab === 'clickstream') return 'Clickstream Intelligence';
+    return 'Admin Dashboard';
+  };
 
-      {/* Mobile Sidebar Overlay */}
+  return (
+    <div className="admin-theme min-h-screen w-full flex font-sans relative overflow-hidden bg-[#07111f] text-white">
+      <div className="pointer-events-none absolute inset-0 z-0">
+        <div className="absolute -top-24 left-[-10%] h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
+        <div className="absolute right-[-6%] top-32 h-80 w-80 rounded-full bg-fuchsia-500/20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-violet-500/15 blur-3xl" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px)] bg-[size:32px_32px] opacity-[0.18]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.08),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(217,70,239,0.08),transparent_26%)]" />
+      </div>
+
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden animate-in fade-in duration-200"
+          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
-        ></div>
+        />
       )}
 
-      {/* Sidebar Navigation */}
-      <div className={`fixed inset-y-0 left-0 z-50 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out h-screen`}>
+      <div
+        className={`fixed inset-y-0 left-0 z-50 h-screen transform transition-transform duration-300 ease-out ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        } md:translate-x-0`}
+      >
         <AdminSidebar
           activeTab={activeTab}
           setActiveTab={(tab) => {
@@ -96,112 +109,169 @@ const AdminDashboard = () => {
         />
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col relative z-10 w-full md:pl-72 min-h-screen">
-        <div className="p-4 md:p-6 lg:p-8 flex flex-col relative">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 shrink-0 gap-4 md:gap-0 border-b border-white/5 pb-4 w-full">
-            <div className="flex items-center gap-4 w-full md:w-auto">
-              <button
-                className="md:hidden p-2 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 text-white transition-colors"
-                onClick={() => setIsMobileMenuOpen(true)}
-              >
-                <Menu size={24} />
-              </button>
-              <h1 className="text-xl md:text-2xl lg:text-3xl font-black text-white tracking-wide uppercase truncate">
-                {activeTab === 'overview' && 'SOC Overview'}
-                {activeTab === 'users' && 'User Governance'}
-                {activeTab === 'monitoring' && 'Behavioral Monitoring'}
-              </h1>
+      <div className="relative z-10 flex min-h-screen w-full flex-1 flex-col md:pl-72">
+        <div className="flex flex-1 flex-col p-4 md:p-6 lg:p-8">
+          <header className="mb-6 rounded-[28px] border border-white/10 bg-white/8 backdrop-blur-xl shadow-[0_10px_50px_rgba(0,0,0,0.25)]">
+            <div className="flex flex-col gap-5 px-4 py-4 md:px-6 md:py-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-start gap-3 md:items-center">
+                  <button
+                    className="md:hidden inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white shadow-[8px_8px_20px_rgba(0,0,0,0.28),-4px_-4px_14px_rgba(255,255,255,0.04)] transition-all duration-200 hover:bg-white/15"
+                    onClick={() => setIsMobileMenuOpen(true)}
+                  >
+                    <Menu size={22} />
+                  </button>
+
+                  <div>
+                    <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-200">
+                      <Sparkles size={14} />
+                      NutriCloud Monitor
+                    </div>
+
+                    <h1 className="text-2xl font-black uppercase tracking-[0.08em] text-white md:text-3xl">
+                      {getPageTitle()}
+                    </h1>
+
+                    <p className="mt-1 max-w-2xl text-sm text-slate-300 md:text-base">
+                      Real-time admin intelligence with behavioral monitoring, user governance, and forensic visibility.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:w-auto">
+                  <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-500/15 to-cyan-400/5 px-4 py-3 backdrop-blur-xl">
+                    <div className="mb-1 flex items-center gap-2 text-cyan-200">
+                      <ShieldCheck size={16} />
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">System</span>
+                    </div>
+                    <p className="text-sm font-semibold text-white">Protected</p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-fuchsia-500/15 to-fuchsia-400/5 px-4 py-3 backdrop-blur-xl">
+                    <div className="mb-1 flex items-center gap-2 text-fuchsia-200">
+                      <Activity size={16} />
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">Status</span>
+                    </div>
+                    <p className="text-sm font-semibold text-white">Live Monitoring</p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 backdrop-blur-xl">
+                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      System Active
+                    </div>
+                    <p className="text-sm font-semibold text-white">
+                      {new Date().toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="text-[10px] md:text-xs lg:text-sm text-gray-500 font-mono tracking-widest bg-black/40 px-3 py-1.5 rounded border border-white/10 uppercase self-end md:self-auto">
-              System Active <span className="hidden sm:inline">• {new Date().toLocaleTimeString()}</span>
-            </div>
-          </div>
+          </header>
 
           {loading ? (
-            <div className="flex-1 flex items-center justify-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-admin-accent"></div>
+            <div className="flex flex-1 items-center justify-center py-20">
+              <div className="flex flex-col items-center gap-4">
+                <div className="h-14 w-14 animate-spin rounded-full border-4 border-white/10 border-t-cyan-400 shadow-[0_0_35px_rgba(34,211,238,0.35)]" />
+                <p className="text-sm uppercase tracking-[0.22em] text-slate-400">
+                  Loading intelligence
+                </p>
+              </div>
             </div>
           ) : (
-            <div className="w-full h-full flex flex-col space-y-6 flex-1">
+            <div className="flex h-full w-full flex-1 flex-col gap-6">
               {selectedUser ? (
-                <ForensicLogPanel user={selectedUser} onBack={() => setSelectedUser(null)} />
+                <div className="rounded-[28px] border border-white/10 bg-white/8 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.22)]">
+                  <ForensicLogPanel user={selectedUser} onBack={() => setSelectedUser(null)} />
+                </div>
               ) : (
                 <>
                   {activeTab === 'overview' && socMetrics && (
-                    <div className="flex flex-col flex-1 space-y-4">
-                      {/* Row 1: KPI Cards */}
-                      <SummaryCards kpi={socMetrics.kpi} />
+                    <div className="flex flex-1 flex-col gap-5">
+                      <div className="rounded-[28px] border border-white/10 bg-white/6 p-3 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)]">
+                        <SummaryCards kpi={socMetrics.kpi} />
+                      </div>
 
-                      <div className="flex flex-col gap-4 flex-1 pb-6 w-full">
-                        {/* Row 2: Graph, Risk, Alerts */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[350px]">
-                          <div className="col-span-1 lg:col-span-5 h-[350px] lg:h-auto">
-                            <ActivityGraph data={socMetrics.activityTrend} />
-                          </div>
-                          <div className="col-span-1 lg:col-span-4 h-[350px] lg:h-auto">
-                            <RiskDistribution data={socMetrics.riskDistribution} />
-                          </div>
-                          <div className="col-span-1 lg:col-span-3 h-[350px] lg:h-auto">
-                            <LiveAlertsPanel alerts={socMetrics.alerts} />
-                          </div>
+                      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+                        <div className="lg:col-span-5 rounded-[28px] border border-white/10 bg-white/7 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)] min-h-[350px]">
+                          <ActivityGraph data={socMetrics.activityTrend} />
                         </div>
 
-                        {/* Row 3: Clickstream Sankey Flow */}
-                        <div className="w-full">
-                          <ClickstreamAnalysis data={clickstreamData} />
+                        <div className="lg:col-span-4 rounded-[28px] border border-white/10 bg-white/7 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)] min-h-[350px]">
+                          <RiskDistribution data={socMetrics.riskDistribution} />
                         </div>
 
-                        {/* Row 4: Live Security Events */}
-                        <div className="w-full min-h-[350px]">
-                          {/* Re-using your beautifully crafted SecurityLogTable we built previously */}
-                          <SecurityLogTable activities={activities.length > 0 ? activities.slice(0, 10) : []} />
+                        <div className="lg:col-span-3 rounded-[28px] border border-white/10 bg-white/7 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)] min-h-[350px]">
+                          <LiveAlertsPanel alerts={socMetrics.alerts} />
+                        </div>
+                      </div>
+
+                      <div className="rounded-[28px] border border-cyan-400/10 bg-gradient-to-br from-cyan-500/8 via-white/6 to-fuchsia-500/8 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)]">
+                        <ClickstreamAnalysis data={clickstreamData} />
+                      </div>
+
+                      <div className="rounded-[28px] border border-white/10 bg-white/7 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)] min-h-[350px]">
+                        <SecurityLogTable activities={activities.length > 0 ? activities.slice(0, 10) : []} />
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                        <div className="rounded-[28px] border border-white/10 bg-white/7 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)] min-h-[400px]">
+                          <SessionAnalytics data={socMetrics.sessionAnalytics} />
                         </div>
 
-                        {/* Row 5: Map & Sessions */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-[400px]">
-                          <div className="h-auto">
-                            <SessionAnalytics data={socMetrics.sessionAnalytics} />
-                          </div>
-                          <div className="h-[400px] lg:h-auto min-h-[400px]">
-                            <GeoLocationHeatmap />
-                          </div>
+                        <div className="rounded-[28px] border border-white/10 bg-white/7 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)] min-h-[400px]">
+                          <GeoLocationHeatmap />
                         </div>
                       </div>
                     </div>
                   )}
 
                   {activeTab === 'users' && (
-                    <div className="flex flex-col flex-1 space-y-6">
-                      <SummaryCards stats={stats} />
-                      <div className="flex-1">
-                        <UsersTable users={users} fetchUsers={fetchDashboardData} onSelectUser={setSelectedUser} title="User Governance Directory" />
+                    <div className="flex flex-1 flex-col gap-6">
+                      <div className="rounded-[28px] border border-white/10 bg-white/6 p-3 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)]">
+                        <SummaryCards stats={stats} />
+                      </div>
+
+                      <div className="rounded-[28px] border border-white/10 bg-white/7 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)] flex-1">
+                        <UsersTable
+                          users={users}
+                          fetchUsers={fetchDashboardData}
+                          onSelectUser={setSelectedUser}
+                          title="User Governance Directory"
+                        />
                       </div>
                     </div>
                   )}
 
                   {activeTab === 'clickstream' && (
-                    <div className="flex flex-col flex-1 h-full min-h-[600px] gap-6">
-                      <div className="bg-admin-bg/50 border border-white/5 p-6 rounded-lg">
-                        <h2 className="text-xl font-bold text-white mb-2 tracking-wide uppercase">Markov Transition Matrix Engine</h2>
-                        <p className="text-gray-400 text-sm">
+                    <div className="flex flex-1 min-h-[600px] flex-col gap-6">
+                      <div className="rounded-[28px] border border-fuchsia-400/15 bg-gradient-to-r from-fuchsia-500/10 via-white/5 to-cyan-500/10 p-6 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.2)]">
+                        <h2 className="mb-2 text-xl font-black uppercase tracking-[0.08em] text-white">
+                          Markov Transition Matrix Engine
+                        </h2>
+                        <p className="max-w-4xl text-sm leading-6 text-slate-300">
                           This system performs real-time Behavioral Probability Anomaly Detection.
-                          It actively tracks all React Router context transitions globally across the application, computing the absolute probability `P(Target | Source)` of every edge maneuver.
+                          It actively tracks all React Router context transitions globally across the application,
+                          computing the absolute probability P(Target | Source) of every edge maneuver.
                         </p>
                       </div>
-                      <div className="flex-1 w-full min-h-[400px]">
+
+                      <div className="rounded-[28px] border border-white/10 bg-white/7 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)] min-h-[400px]">
                         <ClickstreamAnalysis data={clickstreamData} />
                       </div>
-                      <div className="w-full min-h-[400px]">
+
+                      <div className="rounded-[28px] border border-white/10 bg-white/7 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)] min-h-[400px]">
                         <UserClickstreamList users={users} />
                       </div>
                     </div>
                   )}
 
                   {activeTab === 'monitoring' && (
-                    <div className="flex flex-col flex-1 space-y-6">
-                      <BehaviorPanel anomalies={anomalies} />
-                      <div className="flex-1">
+                    <div className="flex flex-1 flex-col gap-6">
+                      <div className="rounded-[28px] border border-white/10 bg-white/7 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)]">
+                        <BehaviorPanel anomalies={anomalies} />
+                      </div>
+
+                      <div className="rounded-[28px] border border-white/10 bg-white/7 p-2 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.18)] flex-1">
                         <SecurityLogTable activities={activities} />
                       </div>
                     </div>
