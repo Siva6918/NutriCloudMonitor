@@ -5,41 +5,80 @@ import { LineChart, Line, ResponsiveContainer } from 'recharts';
 const SummaryCards = ({ kpi }) => {
     if (!kpi) return null;
 
+    const normalized = normalizeKpiData(kpi);
+
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-2 shrink-0">
             <StatCard
                 title="TOTAL ACTIVE USERS"
-                data={kpi.totalActiveUsers}
+                data={normalized.totalActiveUsers}
                 icon={<Users size={20} className="text-cyan-300" />}
                 color="#22d3ee"
             />
             <StatCard
                 title="SESSIONS (24H)"
-                data={kpi.totalSessionsToday}
+                data={normalized.totalSessionsToday}
                 icon={<Activity size={20} className="text-violet-300" />}
                 color="#8b5cf6"
             />
             <StatCard
                 title="LOGIN FAILURES"
-                data={kpi.failedLoginAttempts}
+                data={normalized.failedLoginAttempts}
                 icon={<ShieldAlert size={20} className="text-rose-300" />}
                 color="#fb7185"
             />
             <StatCard
                 title="ANOMALIES (24H)"
-                data={kpi.detectedAnomalies}
+                data={normalized.detectedAnomalies}
                 icon={<Zap size={20} className="text-amber-300" />}
                 color="#f59e0b"
             />
             <StatCard
                 title="AVG RISK SCORE"
-                data={kpi.averageRiskScore}
+                data={normalized.averageRiskScore}
                 icon={<Target size={20} className="text-sky-300" />}
                 color="#38bdf8"
                 suffix="/100"
             />
         </div>
     );
+};
+
+const normalizeMetric = (metric, fallback = 0) => {
+    if (metric && typeof metric === 'object' && !Array.isArray(metric)) {
+        const current = typeof metric.current === 'number' ? metric.current : fallback;
+        const trend = Array.isArray(metric.trend) && metric.trend.length > 0
+            ? metric.trend.map((v) => (typeof v === 'number' ? v : fallback))
+            : [current, current, current, current, current];
+
+        return { current, trend };
+    }
+
+    const current = typeof metric === 'number' ? metric : fallback;
+    return {
+        current,
+        trend: [current, current, current, current, current]
+    };
+};
+
+const normalizeKpiData = (raw) => {
+    return {
+        totalActiveUsers: normalizeMetric(
+            raw.totalActiveUsers ?? raw.activeUsers ?? raw.totalUsers ?? 0
+        ),
+        totalSessionsToday: normalizeMetric(
+            raw.totalSessionsToday ?? raw.sessionsToday ?? raw.totalSessions ?? 0
+        ),
+        failedLoginAttempts: normalizeMetric(
+            raw.failedLoginAttempts ?? raw.loginFailures ?? raw.failedLogins ?? 0
+        ),
+        detectedAnomalies: normalizeMetric(
+            raw.detectedAnomalies ?? raw.anomaliesToday ?? raw.totalAnomalies ?? 0
+        ),
+        averageRiskScore: normalizeMetric(
+            raw.averageRiskScore ?? raw.avgRiskScore ?? raw.riskScore ?? 0
+        )
+    };
 };
 
 const StatCard = ({ title, data, icon, color, suffix = '' }) => {
